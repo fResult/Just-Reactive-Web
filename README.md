@@ -1,5 +1,5 @@
 # Reactive Programming with Reactor & Spring Boot Webflux
-## Script
+## Scripts
 Build
 ```shell
 ./gradlew clean build
