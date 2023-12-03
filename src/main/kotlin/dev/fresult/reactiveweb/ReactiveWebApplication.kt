@@ -4,13 +4,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.stereotype.Component
+import org.springframework.web.reactive.function.server.HandlerFunction
 import org.springframework.web.reactive.function.server.RouterFunction
 import org.springframework.web.reactive.function.server.RouterFunctions.route
+import org.springframework.web.reactive.function.server.ServerRequest
 import org.springframework.web.reactive.function.server.ServerResponse
-import org.springframework.web.reactive.function.server.body
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import java.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
@@ -22,22 +23,31 @@ fun main(args: Array<String>) {
 }
 
 @Configuration
-class AsyncRoutesConfiguration {
+class AsyncRoutesConfiguration(private val handlers: AsyncTaskHandlers) {
   @Bean
   fun routeDefinition(): RouterFunction<ServerResponse> {
     return route()
       .path("/async") { router ->
-        router.GET("/task") { _ ->
-          return@GET Mono.just("Async Task Completed!")
-            .delayElement(Duration.ofSeconds(3))
-            .flatMap { task -> ServerResponse.ok().bodyValue(task) }
-        }
-        router.GET("/tasks") { _ ->
-          val taskFlux = Flux.just("Task 1", "Task 2", "Task 3")
-            .delaySequence(1.seconds.toJavaDuration())
-          return@GET ServerResponse.ok().body(taskFlux)
-        }
+        router.GET("/task", handlers::getTask)
+        router.GET("/tasks", handlers.getTasks)
       }
       .build()
+  }
+}
+
+@Component
+class AsyncTaskHandlers {
+  fun getTask(request: ServerRequest): Mono<ServerResponse> {
+    return Mono.just("Async Task Completed!")
+      .delayElement(3.seconds.toJavaDuration())
+//      .flatMap { task -> ServerResponse.ok().bodyValue(task) }
+      .flatMap(ServerResponse.ok()::bodyValue)
+  }
+
+  val getTasks = HandlerFunction { _ ->
+    val taskFlux = Flux.just("Task 1", "Task 2", "Task 3")
+      .delayElements(1.seconds.toJavaDuration())
+    // return@HandlerFunction ServerResponse.ok().body(taskFlux, String::class.java)
+    ServerResponse.ok().body(taskFlux, String::class.java)
   }
 }
