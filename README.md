@@ -7,7 +7,7 @@ You can check it out here.\
 https://medium.com/p/555589fce607
 
 ## Prerequisite
-1. Java Development Kit (JDK) version 17 or more (I preferred version 21)
+1. Java Development Kit (JDK) version 21 or more
 2. Gradle 8 (or more)
 3. IntelliJ IDEA (or any preferred IDE)
 4. Kotlin Plugin: (for IntelliJ IDEA’s user)
