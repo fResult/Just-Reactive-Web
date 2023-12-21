@@ -9,14 +9,14 @@ import org.springframework.web.reactive.function.server.coRouter
 class StreamOperatorRouter(private val handler: StreamOperatorHandler) {
   @Bean
   fun streamOperatorRoutes() = coRouter {
-"/stream-operators".nest {
-  GET("/map", handler::handleMap)
-  GET("/filter", handler::handleFilter)
-  GET("/flat-map", handler::handleFlatMap)
-  GET("/concat-map", handler::handleConcatMap)
-  GET("/reduce", handler::handleReduce)
-  GET("/zip", handler::handleZip)
-  GET("/merge", handler::handleMerge)
-}
+    "/stream-operators".nest {
+      GET("/map", handler::handleMap)
+      GET("/filter", handler::handleFilter)
+      GET("/flat-map", handler::handleFlatMap)
+      GET("/concat-map", handler::handleConcatMap)
+      GET("/reduce", handler::handleReduce)
+      GET("/zip", handler::handleZip)
+      GET("/merge", handler::handleMerge)
+    }
   }
 }

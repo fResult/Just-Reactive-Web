@@ -20,69 +20,57 @@ class StreamOperatorHandler {
     return ServerResponse.ok().bodyAndAwait(fahrenheitTemps.asFlow())
   }
 
-  suspend fun handleMapBk(request: ServerRequest): ServerResponse {
-    val originalStream: Flux<Int> = Flux.just(1, 2, 3, 4, 5)
-    val transformedStream: Flux<Int> = originalStream.map(::double)
-    return ServerResponse.ok().bodyAndAwait(transformedStream.asFlow())
-  }
-
+  private fun isEven(x: Int) = x % 2 == 0
   suspend fun handleFilter(request: ServerRequest): ServerResponse {
-    val numberStream: Flux<Int> = Flux.range(1, 10)
-    val evenNumbers: Flux<Int> = numberStream.filter(::isEven)
-    return ServerResponse.ok().bodyAndAwait(evenNumbers.asFlow())
+    val sensorDataStream: Flux<Int> = Flux.range(1, 10)
+    val filteredEvenData: Flux<Int> = sensorDataStream.filter(::isEven)
+    return ServerResponse.ok().bodyAndAwait(filteredEvenData.asFlow())
   }
 
   suspend fun handleFlatMap(request: ServerRequest): ServerResponse {
-    val sourceStream: Flux<Flux<Int>> = Flux.just(
-      Flux.just(1984, 1987, 1990),
-      Flux.just(2002, 2005, 2008),
-      Flux.just(2013, 2016, 2019),
+    val tasks: Flux<Flux<String>> = Flux.just(
+      Flux.just("Task 1", "Task 2", "Task 3").delayElements(Duration.ofMillis(500)),
+      Flux.just("Task 4", "Task 5").delayElements(Duration.ofMillis(200)),
+      Flux.just("Task 6", "Task 7", "Task 8").delayElements(Duration.ofMillis(300))
     )
-    val flattenedStream: Flux<Int> = sourceStream.flatMap(::delayHalfSecond)
-    return ServerResponse.ok().bodyAndAwait(flattenedStream.asFlow())
+    val flattedTasks: Flux<String> = tasks.flatMap { it }
+    return ServerResponse.ok().bodyAndAwait(flattedTasks.asFlow())
   }
 
   suspend fun handleConcatMap(request: ServerRequest): ServerResponse {
-    val sourceStream: Flux<Flux<Int>> = Flux.just(
-      Flux.just(1984, 1987, 1990),
-      Flux.just(2002, 2005, 2008),
-      Flux.just(2013, 2016, 2019),
+    val tasks: Flux<Flux<String>> = Flux.just(
+      Flux.just("Task 1", "Task 2", "Task 3").delayElements(Duration.ofMillis(500)),
+      Flux.just("Task 4", "Task 5").delayElements(Duration.ofMillis(200)),
+      Flux.just("Task 6", "Task 7", "Task 8").delayElements(Duration.ofMillis(300))
     )
-    val concatenatedStream: Flux<Int> = sourceStream.concatMap(::delayHalfSecond)
-    return ServerResponse.ok().bodyAndAwait(concatenatedStream.asFlow())
+    val concatenatedTasks: Flux<String> = tasks.concatMap { it }
+    return ServerResponse.ok().bodyAndAwait(concatenatedTasks.asFlow())
   }
 
+  private fun sum(x: Double, y: Double): Double = x + y
   suspend fun handleReduce(request: ServerRequest): ServerResponse {
-    val numbers: Flux<Int> = Flux.just(1, 2, 3, 4, 5)
-    val total: Mono<Int> = numbers.reduce(::sum)
-    return ServerResponse.ok().bodyValueAndAwait(total.awaitSingle())
+    val salesDataStream: Flux<Double> = Flux.just(120.0, 65.0, 210.0, 90.0)
+    val totalRevenueMono: Mono<Double> = salesDataStream.reduce(::sum)
+    val totalRevenue: Double = totalRevenueMono.awaitSingle()
+    return ServerResponse.ok().bodyValueAndAwait(totalRevenue)
   }
 
+  private fun <K, V> dictOf(key: K, value: V) = mapOf(key to value)
   suspend fun handleZip(request: ServerRequest): ServerResponse {
-    val letterStream: Flux<String> = Flux.just("A", "B", "C")
-    val numberStream: Flux<Int> = Flux.just(1, 2, 3)
-    val zippedStream: Flux<Map<String, Int>> =
-      Flux.zip(letterStream, numberStream, ::dictOf)
-    return ServerResponse.ok().bodyAndAwait(zippedStream.asFlow())
+    val products: Flux<String> = Flux.just("Laptop", "Phone", "Tablet")
+      .delayElements(Duration.ofMillis(300))
+    val prices: Flux<Double> = Flux.just(1200.0, 800.0, 400.0)
+      .delayElements(Duration.ofMillis(200))
+    val productPricePairs: Flux<Map<String, Double>> = Flux.zip(products, prices, ::dictOf)
+    return ServerResponse.ok().bodyAndAwait(productPricePairs.asFlow())
   }
 
   suspend fun handleMerge(request: ServerRequest): ServerResponse {
-    val numberStream: Flux<Int> = Flux.just(1, 2, 3)
-    val animalStream: Flux<String> = Flux.just("Dog", "Elephant", "Fox")
-    val mergedStream: Flux<*> = Flux.merge(numberStream, animalStream)
-    return ServerResponse.ok().bodyAndAwait(mergedStream.asFlow())
-  }
-
-  private fun <T> delayHalfSecond(stream: Flux<T>): Flux<T> {
-    return stream.delayElements(Duration.ofMillis(500))
-  }
-  private fun double(x: Int) = x * 2
-  private fun isEven(x: Int) = x % 2 == 0
-  private fun sum(x: Int, y: Int) = x + y
-  private fun <K, V> dictOf(key: K, value: V) = key mapTo value
-
-  private infix fun <K, V> K.mapTo(value: V): Map<K, V> {
-    val key = this
-    return mapOf(key to value)
+    val userData: Flux<String> = Flux.just("User 1", "User 2", "User 3")
+      .delayElements(Duration.ofMillis(300))
+    val productData: Flux<String> = Flux.just("Product A", "Product B", "Product C")
+      .delayElements(Duration.ofMillis(200))
+    val mergedData: Flux<String> = Flux.merge(userData, productData)
+    return ServerResponse.ok().bodyAndAwait(mergedData.asFlow())
   }
 }
