@@ -2,54 +2,66 @@ package dev.fresult.reactiveweb.repositories
 
 import dev.fresult.reactiveweb.entities.TaskDAO
 import dev.fresult.reactiveweb.entities.TaskStatus
-import kotlinx.coroutines.flow.*
+import dev.fresult.reactiveweb.entities.getId
 import org.springframework.stereotype.Component
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
+import reactor.kotlin.core.publisher.switchIfEmpty
+import reactor.kotlin.core.publisher.toFlux
+import reactor.kotlin.core.publisher.toMono
 
 @Component
 class TaskRepository {
-  private val tasks: MutableSharedFlow<TaskDAO> = MutableSharedFlow(replay = Int.MAX_VALUE)
+  private val tasks: Flux<TaskDAO> = Flux.just(
+    TaskDAO(777, "Eat cat", TaskStatus.TODO.name),
+    TaskDAO(888, "Eat dog", TaskStatus.DOING.name),
+    TaskDAO(999, "Eat elephant", TaskStatus.DONE.name),
+  )
 
-  init {
-    val initialData: List<TaskDAO> = listOf(
-      TaskDAO(777, "Eat cat", TaskStatus.TODO.name),
-      TaskDAO(888, "Eat dog", TaskStatus.DOING.name),
-      TaskDAO(999, "Eat elephant", TaskStatus.DONE.name),
-    )
+  fun findAll(): Flux<TaskDAO> = tasks
 
-    initialData.forEach {
-      tasks.tryEmit(it)
-    }
+  fun findById(id: Long): Mono<TaskDAO> {
+    return tasks.filter { id == it.id }.next()
   }
 
-  suspend fun findAll(): Flow<TaskDAO> = tasks.asSharedFlow()
-
-  suspend fun findById(id: Long): TaskDAO? {
-    return tasks.firstOrNull { id == it.id }
+  fun save(task: TaskDAO): Mono<TaskDAO> {
+    tasks.concatWith(task.copy(id = getId()).toMono()).subscribe()
+    return task.toMono()
   }
 
-  suspend fun save(task: TaskDAO): TaskDAO {
-    tasks.emit(task)
-    return task
-  }
-
-  suspend fun updateTask(task: TaskDAO): TaskDAO {
+  fun updateTask(task: TaskDAO): Mono<TaskDAO> {
     save(task)
-    return task
+    return task.toMono()
   }
 
-  suspend fun deleteById(id: Long): Unit {
-    tasks.emit(tasks.first { it.id == id }) // Emit a task to delete
+  fun deleteById(id: Long) {
+    tasks
+      .filter { it.id != id }
+      .collectList()
+      .map {
+        Flux.empty<TaskDAO>()
+      }.map { updatedTasks ->
+        tasks.concatWith(updatedTasks.toFlux()) // Add the updated tasks back
+      }.switchIfEmpty {
+        Mono.error(NoSuchElementException("Task ID: $id not found."))
+      }.subscribe()
   }
 
-  suspend fun updateStatusById(id: Long, newStatus: TaskStatus): TaskDAO? {
-    val existingTask = tasks.firstOrNull { it.id == id }
+  fun updateStatusById(id: Long, newStatus: TaskStatus): Mono<TaskDAO> {
 
-    return existingTask
-      .takeIf { it != null }
-      .let {
-        val updatedTask = it!!.copy(status = newStatus.toString())
-        save(updatedTask)
-        updatedTask
-      }
+//    val existingTask = tasks.filter { it.id == id }.toMono()
+//
+//
+//    return existingTask
+//      .let {
+//        val updatedTask = it!!.copy(status = newStatus.toString())
+//        save(updatedTask)
+//        updatedTask
+//      }
+    return tasks.filter { it.id == id }.next()
+      .flatMap { existingTask ->
+        val updatedTask = existingTask.copy(status = newStatus.toString())
+        save(updatedTask).thenReturn(updatedTask)
+      }.toMono()
   }
 }
