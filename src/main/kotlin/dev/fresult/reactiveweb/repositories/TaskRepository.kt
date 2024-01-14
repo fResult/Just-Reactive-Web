@@ -1,5 +1,6 @@
 package dev.fresult.reactiveweb.repositories
 
+import dev.fresult.reactiveweb.entities.BaseEntity
 import dev.fresult.reactiveweb.entities.TaskModel
 import dev.fresult.reactiveweb.entities.TaskStatus
 import dev.fresult.reactiveweb.entities.getId
@@ -8,6 +9,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.toMono
 import java.util.*
+import java.util.function.Predicate.not
 
 @Component
 class TaskRepository {
@@ -20,7 +22,7 @@ class TaskRepository {
   fun findAll(): Flux<TaskModel> = tasks
 
   fun findById(id: Long): Mono<TaskModel> {
-    return tasks.filter { id == it.id }.switchIfEmpty {
+    return tasks.filter(isSameId(id)).switchIfEmpty {
       throw NoSuchElementException("Task ID $id not found")
     }.next()
   }
@@ -29,12 +31,17 @@ class TaskRepository {
     val taskIdToSave = task.id ?: getId()
     val taskToSave = if (Optional.ofNullable(task.id).isEmpty) task
     else task.copy(id = taskIdToSave, title = task.title, status = task.status)
-    tasks = tasks.filter { taskIdToSave != it.id }.concatWith(taskToSave.copy(id = taskIdToSave).toMono())
+    tasks = tasks.filter(not(isSameId(taskIdToSave))).concatWith(taskToSave.copy(id = taskIdToSave).toMono())
 
     return findById(taskIdToSave)
   }
 
   fun deleteById(id: Long) {
-    tasks = tasks.filter { it.id != id }
+    tasks = tasks.filter(not(isSameId<TaskModel, Long>(id)))
   }
+}
+
+typealias PredicateFn<T> = (T) -> Boolean
+private fun <T : BaseEntity<ID>, ID> isSameId(id: ID): PredicateFn<T> = { task ->
+  task.id == id
 }
