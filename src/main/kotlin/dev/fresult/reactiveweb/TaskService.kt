@@ -67,5 +67,4 @@ class TaskService(val repository: TaskRepository) {
       repository.save(taskToUpdate.toModel()).map(Task::fromModel)
     }
   }
-
 }
