@@ -12,7 +12,7 @@ import reactor.core.publisher.Mono
 import reactor.kotlin.core.publisher.switchIfEmpty
 
 @Component
-class TaskHandler(val service: TaskService) {
+class TaskHandler(private val service: TaskService) {
   suspend fun all(request: ServerRequest): ServerResponse {
     val tasksResponse = service.all().map(Task::toDTO).asFlow()
     return ServerResponse.ok().bodyAndAwait(tasksResponse)
