@@ -5,9 +5,10 @@ import dev.fresult.reactiveweb.repositories.TaskRepository
 import org.springframework.stereotype.Service
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import kotlin.reflect.KFunction1
 
 @Service
-class TaskService(val repository: TaskRepository) {
+class TaskService(private val repository: TaskRepository) {
   fun all(): Flux<Task> {
     return repository.findAll().map(Task::fromModel)
   }
@@ -23,9 +24,9 @@ class TaskService(val repository: TaskRepository) {
 
   /**
    * @param action "next" | "previous"
-   * @return Mono<TaskDTO>
+   * @return updateTaskStatusById :: (TaskID) -> Mono<TaskDTO>
    */
-  fun updateByAction(action: String): (Long) -> Mono<Task> =
+  fun updateByAction(action: String): KFunction1<Long, Mono<Task>> =
     if (action == "next") ::nextStatus else ::previousStatus
 
   fun updateById(id: Long, task: Task): Mono<Task> {
